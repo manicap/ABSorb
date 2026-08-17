@@ -1,0 +1,29 @@
+{
+  "left_path": "D:\\-=torent=-\\povidky a hry 02 D-F",
+  "right_path": "\\\\funbox\\d\\audiobookshelf\\audioknihy",
+  "last_used": 1786944305.2274213,
+  "recent_left": [
+    "D:\\-=torent=-\\povidky a hry 02 D-F",
+    "D:\\-=torent=-\\povidky a hry 01 A-Č",
+    "D:\\-=torent=-"
+  ],
+  "recent_right": [
+    "\\\\funbox\\d\\audiobookshelf\\nezatříděné",
+    "\\\\funbox\\d\\audiobookshelf\\audioknihy",
+    "\\\\funbox\\d\\audiobookshelf\\Dramatizace"
+  ],
+  "libraries": [
+    {
+      "id": "dce819a9-dae6-477a-8951-0fc50e8d0e8f",
+      "name": "Audioknihy",
+      "path": "\\\\funbox\\d\\audiobookshelf\\audioknihy",
+      "enabled": true
+    },
+    {
+      "id": "729fe90a-27f2-4261-baad-8d1e092c74e1",
+      "name": "nezatříděné",
+      "path": "\\\\funbox\\d\\audiobookshelf\\nezatříděné",
+      "enabled": true
+    }
+  ]
+}

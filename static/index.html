@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ABS Grok</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">ABS Grok <span class="version">v2.0.2</span></div>
+      <div class="paths">
+        <div class="path-group">
+          <label>Nové nahrávky (levý panel)</label>
+          <div class="path-input">
+            <input type="text" id="leftPath" placeholder="Cesta ke složce s novými nahrávkami…" spellcheck="false" />
+            <button class="btn btn-small" id="btnLeftBrowse" title="Cestu je potřeba zadat ručně (zkopíruj z Průzkumníka). Kliknutím zobrazíš dříve použité cesty.">📁</button>
+          </div>
+        </div>
+        <div class="path-group">
+          <label>Audioknihovna (pravý panel)</label>
+          <div class="path-input">
+            <button class="btn btn-secondary" id="btnManageLibs" onclick="openLibraryManager()" style="width:100%;justify-content:flex-start">
+              📚 Správa knihoven <span id="libCountLabel" class="count"></span>
+            </button>
+            <input type="hidden" id="rightPath" value="" />
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary" id="btnRefreshLib" onclick="refreshLibrary()" title="Znovu načíst audioknihovnu">↻ Knihovna</button>
+        <button class="btn btn-primary" id="btnCompare" onclick="startCompare()">Porovnat</button>
+        <button class="btn btn-danger hidden" id="btnCancel" onclick="cancelCompare()">Zrušit</button>
+        <button class="btn btn-secondary" id="btnClearCache" onclick="clearCache()" title="Vymazat keš skenů" disabled>🗑️ Keš</button>
+      </div>
+    </header>
+
+    <!-- Progress -->
+    <div id="progressBar" class="progress-bar hidden">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-meta">
+        <div class="progress-spinner" id="progressSpinner"></div>
+        <div class="progress-text" id="progressText">Připraveno</div>
+        <div class="progress-text" id="enrichStatus" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Stats / Filters -->
+    <div id="stats" class="stats hidden">
+      <div class="stats-left">
+        <button class="filter-btn active" data-filter="found" id="filterFound">
+          Nalezeno: <strong id="statFound">0</strong>
+        </button>
+        <button class="filter-btn active" data-filter="uncertain" id="filterUncertain">
+          Nejisté: <strong id="statUncertain">0</strong>
+        </button>
+        <button class="filter-btn active" data-filter="not_found" id="filterNotFound">
+          Nenalezeno: <strong id="statNotFound">0</strong>
+        </button>
+      </div>
+      <div class="stats-right" id="libraryToggles">
+        <span class="stats-label">Knihovny:</span>
+        <button type="button" class="filter-btn lib-all" id="libAll" title="Zapnout vše">Vše</button>
+        <button type="button" class="filter-btn lib-none" id="libNone" title="Vypnout vše">Nic</button>
+        <span id="libToggleBtns"></span>
+      </div>
+    </div>
+
+    <!-- Main panels -->
+    <main class="panels">
+      <!-- LEFT -->
+      <section class="panel" id="leftPanel">
+        <div class="panel-header">
+          <h2>Nové nahrávky <span id="leftCount" class="count"></span></h2>
+          <div class="sort-controls">
+            <button class="sort-btn active" data-sort="name" data-panel="left">Název <span class="sort-dir">↑</span></button>
+            <button class="sort-btn" data-sort="author" data-panel="left">Autor <span class="sort-dir"></span></button>
+            <button class="sort-btn" data-sort="title" data-panel="left">Titul <span class="sort-dir"></span></button>
+          </div>
+        </div>
+        <div class="search-wrap">
+          <button type="button" class="search-clear" id="leftSearchClear" title="Vymazat hledání" aria-label="Vymazat">×</button>
+          <input type="text" id="leftSearch" class="search-input" placeholder="Hledat v nových nahrávkách…" autocomplete="off" spellcheck="false" />
+          <div class="suggest-box hidden" id="leftSuggest"></div>
+        </div>
+        <div class="list-container" id="leftList"></div>
+      </section>
+
+      <!-- RIGHT -->
+      <section class="panel" id="rightPanel">
+        <div class="panel-header">
+          <h2>Audioknihovna <span id="rightCount" class="count"></span></h2>
+          <div class="sort-controls">
+            <button class="sort-btn active" data-sort="name" data-panel="right">Název <span class="sort-dir">↑</span></button>
+            <button class="sort-btn" data-sort="author" data-panel="right">Autor <span class="sort-dir"></span></button>
+            <button class="sort-btn" data-sort="title" data-panel="right">Titul <span class="sort-dir"></span></button>
+          </div>
+        </div>
+        <div class="search-wrap">
+          <button type="button" class="search-clear" id="rightSearchClear" title="Vymazat hledání" aria-label="Vymazat">×</button>
+          <input type="text" id="rightSearch" class="search-input" placeholder="Hledat v audioknihovně…" autocomplete="off" spellcheck="false" />
+          <div class="suggest-box hidden" id="rightSuggest"></div>
+        </div>
+        <div class="list-container" id="rightList"></div>
+      </section>
+    </main>
+
+    <!-- Detail footer – two columns, no scroll -->
+    <footer class="detail" id="detail">
+      <div class="detail-side" id="detailLeft">
+        <div class="detail-side-header">
+                    <div class="mini-player" id="playerLeft">
+            <button type="button" class="player-btn" data-action="play" data-side="left" title="Přehrát">▶</button>
+            <button type="button" class="player-btn" data-action="stop" data-side="left" title="Stop">■</button>
+            <div class="seek-wrap">
+              <input type="range" class="player-seek" id="seekLeft" min="0" max="0" value="0" step="0.1" disabled />
+              <div class="seek-markers" id="markersLeft"></div>
+            </div>
+            <span class="player-time" id="timeLeft">0:00</span>
+            <input type="range" class="player-vol" id="volLeft" min="0" max="1" step="0.01" value="1" title="Hlasitost" />
+            <div class="file-badges" id="badgesLeft">
+              <span class="badge" data-kind="id3" title="ID3 tag">ID3</span>
+              <span class="badge" data-kind="m4a" title="M4A metadata">M4A</span>
+              <span class="badge" data-kind="json" title="JSON metadata">JSON</span>
+              <span class="badge" data-kind="cover" title="Cover (obálka)">COV</span>
+            </div>
+          </div>
+          <div class="detail-meta" id="detailLeftMeta"></div>
+        </div>
+        <div class="detail-placeholder" id="detailLeftPlaceholder">Klikni na položku v levém panelu…</div>
+        <div class="detail-content hidden" id="detailLeftContent"></div>
+      </div>
+      <div class="detail-divider"></div>
+      <div class="detail-side" id="detailRight">
+        <div class="detail-side-header">
+                    <div class="mini-player" id="playerRight">
+            <button type="button" class="player-btn" data-action="play" data-side="right" title="Přehrát">▶</button>
+            <button type="button" class="player-btn" data-action="stop" data-side="right" title="Stop">■</button>
+            <div class="seek-wrap">
+              <input type="range" class="player-seek" id="seekRight" min="0" max="0" value="0" step="0.1" disabled />
+              <div class="seek-markers" id="markersRight"></div>
+            </div>
+            <span class="player-time" id="timeRight">0:00</span>
+            <input type="range" class="player-vol" id="volRight" min="0" max="1" step="0.01" value="1" title="Hlasitost" />
+            <div class="file-badges" id="badgesRight">
+              <span class="badge" data-kind="id3" title="ID3 tag">ID3</span>
+              <span class="badge" data-kind="m4a" title="M4A metadata">M4A</span>
+              <span class="badge" data-kind="json" title="JSON metadata">JSON</span>
+              <span class="badge" data-kind="cover" title="Cover (obálka)">COV</span>
+            </div>
+          </div>
+          <div class="detail-meta" id="detailRightMeta"></div>
+        </div>
+        <div class="detail-placeholder" id="detailRightPlaceholder">Klikni na položku v pravém panelu…</div>
+        <div class="detail-content hidden" id="detailRightContent"></div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Library manager -->
+  <div id="libModal" class="modal-overlay hidden">
+    <div class="modal" style="width:min(640px,96vw);max-height:85vh;display:flex;flex-direction:column">
+      <div class="modal-header">
+        <h3>Správa knihoven ABS</h3>
+        <button class="modal-close" onclick="closeLibraryManager()">×</button>
+      </div>
+      <div class="modal-body" style="overflow:auto;flex:1">
+        <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px">
+          Každá cesta = jedna část audioknihovny. Zapínání/vypínání pro porovnání je nahoře u filtrů.
+        </p>
+        <div id="libList"></div>
+        <div class="lib-add" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" id="libNewName" placeholder="Název (např. Pohádky)" style="flex:1;min-width:120px" />
+          <input type="text" id="libNewPath" placeholder="Cesta ke složce…" style="flex:2;min-width:200px" spellcheck="false" />
+          <button class="btn btn-primary" onclick="addLibrary()">Přidat</button>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px">
+        <button class="btn btn-secondary" onclick="closeLibraryManager()">Zavřít</button>
+        <button class="btn btn-primary" onclick="saveLibrariesAndReload()">Uložit a načíst</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidecar preview popup -->
+  <div id="previewOverlay" class="preview-overlay hidden">
+    <div class="preview-box" id="previewBox">
+      <div class="preview-header">
+        <span id="previewTitle">Náhled</span>
+        <div class="preview-actions">
+          <button type="button" class="preview-fmt-btn hidden" id="previewFmtBtn" title="Přepnout formátování JSON">{}</button>
+          <button class="modal-close" id="previewClose">×</button>
+        </div>
+      </div>
+      <div class="preview-body" id="previewBody"></div>
+    </div>
+  </div>
+
+  <!-- Modal overlay -->
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal" id="modalBox">
+      <div class="modal-header">
+        <span id="modalTitle">Cesta</span>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
